@@ -27,8 +27,8 @@ export default function AuthButton({
       >
         <Avatar
           image={session.user.image ?? avatarUrl(session.user.slackId)}
-          name={session.user.name}
-          nickname={session.user.nickname}
+          name={null}
+          nickname={null}
           size={44}
         />
       </button>

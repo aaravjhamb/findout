@@ -11,8 +11,8 @@ import {
 } from "@/lib/rooms";
 import { STATUS_META, type Occupant, type RoomStatus } from "@/lib/types";
 
-function initials(name?: string | null, nickname?: string | null): string {
-  const base = (name || nickname || "?").trim();
+function initials(nickname?: string | null): string {
+  const base = (nickname || "?").trim();
   const parts = base.split(/\s+/);
   if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase();
   return base.slice(0, 2).toUpperCase();
@@ -21,7 +21,12 @@ function initials(name?: string | null, nickname?: string | null): string {
 function aggregateStatus(list: Occupant[]): RoomStatus {
   if (list.some((o) => o.status === "open")) return "open";
   if (list.some((o) => o.status === "busy")) return "busy";
+  if (list.some((o) => o.status === "visiting")) return "visiting";
   return "away";
+}
+
+function clipId(entryId: string) {
+  return `clip-${entryId.replace(/[^a-zA-Z0-9_-]/g, "-")}`;
 }
 
 const POI_MARGIN = 2;
@@ -53,11 +58,13 @@ export default function FloorPlan2D({
   occupants,
   activeRoom,
   onSelectRoom,
+  onOpenHelp,
 }: {
   floor: number;
   occupants: Occupant[];
   activeRoom: number | null;
   onSelectRoom: (floor: number, room: number) => void;
+  onOpenHelp: () => void;
 }) {
   const svgRef = useRef<SVGSVGElement>(null);
 
@@ -253,7 +260,7 @@ export default function FloorPlan2D({
           {occupants
             .filter((o) => o.floor === floor && o.image)
             .map((o) => (
-              <clipPath id={`clip-${o.slackId}`} key={o.slackId}>
+              <clipPath id={clipId(o.entryId)} key={o.entryId}>
                 <circle cx="0" cy="0" r="0.44" />
               </clipPath>
             ))}
@@ -355,8 +362,10 @@ export default function FloorPlan2D({
           }
 
           const list = byRoom.get(c.room) ?? [];
+          const residents = list.filter((o) => !o.isVisitor);
+          const visitors = list.filter((o) => o.isVisitor);
           const occupied = list.length > 0;
-          const status = occupied ? aggregateStatus(list) : null;
+          const status = residents.length > 0 ? aggregateStatus(residents) : visitors.length > 0 ? "visiting" : null;
           const isActive = c.room === activeRoom;
 
           let fill = "#fffcf5";
@@ -373,7 +382,7 @@ export default function FloorPlan2D({
             strokeWidth = 0.24;
           }
 
-          const lead = list[0];
+          const lead = residents[0] ?? visitors[0];
           const avatarY = c.z - 0.32;
           const numberY = occupied ? c.z + 0.66 : c.z;
 
@@ -406,19 +415,19 @@ export default function FloorPlan2D({
                       y={-0.44}
                       width={0.88}
                       height={0.88}
-                      clipPath={`url(#clip-${lead.slackId})`}
+                      clipPath={`url(#${clipId(lead.entryId)})`}
                       preserveAspectRatio="xMidYMid slice"
                     />
                   ) : (
                     <text x="0" y="0" textAnchor="middle" dominantBaseline="central" fontSize={0.4} fill="#61453a" style={{ fontWeight: 700 }}>
-                      {initials(lead.name, lead.nickname)}
+                      {initials(lead.nickname)}
                     </text>
                   )}
-                  {list.length > 1 && (
+                  {residents.length > 1 && (
                     <>
                       <circle cx="0.44" cy="-0.36" r="0.28" fill="#61453a" />
                       <text x="0.44" y="-0.36" textAnchor="middle" dominantBaseline="central" fontSize={0.3} fill="#fffcf5" style={{ fontWeight: 700 }}>
-                        +{list.length - 1}
+                        +{residents.length - 1}
                       </text>
                     </>
                   )}
@@ -428,12 +437,28 @@ export default function FloorPlan2D({
               <text x={c.x} y={numberY} textAnchor="middle" dominantBaseline="central" fontSize={occupied ? 0.42 : 0.56} fill="#61453a" style={{ fontWeight: 700 }}>
                 {String(c.room).padStart(2, "0")}
               </text>
+
+              {visitors.length > 0 && (
+                <g transform={`translate(${c.x}, ${c.z + 0.18})`}>
+                  <rect x="-0.58" y="-0.18" width="1.16" height="0.36" rx="0.18" fill="#3b82f6" />
+                  <text x="0" y="0" textAnchor="middle" dominantBaseline="central" fontSize="0.22" fill="#fffcf5" style={{ fontWeight: 800 }}>
+                    {visitors.length} VIS
+                  </text>
+                </g>
+              )}
             </g>
           );
         })}
       </svg>
 
       <div className="absolute right-2 bottom-2 flex flex-col gap-1.5">
+        <button
+          onClick={onOpenHelp}
+          className="h-9 w-9 rounded-[10px] bg-card border-2 border-line text-ink text-lg font-bold grid place-items-center active:scale-95"
+          aria-label="Open help"
+        >
+          ?
+        </button>
         <button
           onClick={() => zoomButtons(0.8)}
           className="h-9 w-9 rounded-[10px] bg-card border-2 border-line text-ink text-xl font-bold grid place-items-center active:scale-95"

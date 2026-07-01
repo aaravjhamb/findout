@@ -1,0 +1,21 @@
+services:
+  findout-db:
+    image: postgres:16-alpine
+    container_name: findout-local-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: findout
+      POSTGRES_PASSWORD: findout
+      POSTGRES_DB: findout
+    ports:
+      - "54329:5432"
+    volumes:
+      - findout-postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U findout -d findout"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  findout-postgres:

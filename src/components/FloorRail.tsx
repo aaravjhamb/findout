@@ -31,7 +31,7 @@ export default function FloorRail({
 
   return (
     <div className="h-full w-[64px] shrink-0 flex flex-col items-center gap-2 py-2 overflow-y-auto no-scrollbar">
-      <div className="text-[10px] font-bold text-muted tracking-wider mb-0.5">FLOOR</div>
+      <div className="select-none text-[10px] font-bold text-muted tracking-wider mb-0.5">FLOOR</div>
       {floors.length === 0 && (
         <div className="text-[10px] text-muted text-center px-1 mt-2">no floors yet</div>
       )}

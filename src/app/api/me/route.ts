@@ -22,11 +22,13 @@ export async function GET() {
     return NextResponse.json({
       me: {
         slackId,
-        name: session!.user.name ?? null,
-        nickname: session!.user.nickname ?? null,
+        name: null,
+        nickname: null,
         image: session!.user.image ?? null,
         floor: null,
         room: null,
+        visitFloor: null,
+        visitRoom: null,
         status: "open",
         statusMessage: null,
       },
@@ -71,6 +73,28 @@ export async function PUT(req: NextRequest) {
   if (body.status !== undefined) {
     if (!isStatus(body.status)) return NextResponse.json({ error: "invalid status" }, { status: 400 });
     patch.status = body.status;
+  }
+  if (body.visitFloor !== undefined || body.visitRoom !== undefined || body.status === "visiting") {
+    const visitFloor = body.visitFloor === null ? null : Number(body.visitFloor);
+    const visitRoom = body.visitRoom === null ? null : Number(body.visitRoom);
+    if (body.status === "visiting") {
+      if (visitFloor == null || visitRoom == null || !isValidRoom(visitFloor, visitRoom)) {
+        return NextResponse.json({ error: "invalid visiting room (floor 1-42, room 1-31)" }, { status: 400 });
+      }
+      patch.visitFloor = visitFloor;
+      patch.visitRoom = visitRoom;
+    } else {
+      patch.visitFloor = null;
+      patch.visitRoom = null;
+    }
+  }
+  if (body.nickname !== undefined) {
+    const nickname = String(body.nickname).trim().slice(0, 32);
+    if (nickname.length < 2) {
+      return NextResponse.json({ error: "nickname must be at least 2 characters" }, { status: 400 });
+    }
+    patch.nickname = nickname;
+    patch.name = null;
   }
   if (body.statusMessage !== undefined) {
     patch.statusMessage = body.statusMessage ? String(body.statusMessage).slice(0, 80) : null;

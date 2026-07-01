@@ -3,6 +3,7 @@ node_modules
 out
 .env
 .env*.local
+.data
 *.log
 .DS_Store
 next-env.d.ts

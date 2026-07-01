@@ -90,7 +90,7 @@ export default function SearchBar({
             onFocus={() => data && setOpen(true)}
             inputMode="search"
             placeholder="Room 3612, @slack, email…"
-            className="bg-transparent outline-none flex-1 min-w-0 text-[15px] text-ink placeholder:text-muted"
+            className="select-none bg-transparent outline-none flex-1 min-w-0 text-[15px] text-ink placeholder:text-muted"
           />
           {loading && (
             <span className="h-3.5 w-3.5 rounded-full border-2 border-line border-t-ink animate-spin" />
@@ -120,14 +120,14 @@ export default function SearchBar({
 
           {data.people.map((p) => (
             <button
-              key={p.slackId}
+              key={p.entryId}
               onClick={() => pick(p.floor, p.room)}
               className="w-full flex items-center gap-3 px-4 py-3 hover:bg-card2 text-left border-b-2 border-line last:border-0"
             >
-              <Avatar image={p.image} name={p.name} nickname={p.nickname} size={40} />
+              <Avatar image={p.image} name={null} nickname={p.nickname} size={40} />
               <div className="min-w-0 flex-1">
                 <div className="font-semibold text-ink truncate flex items-center gap-2">
-                  {p.name || p.nickname}
+                  {p.nickname || "Someone"}
                   <StatusDot status={p.status} />
                 </div>
                 <div className="text-sm text-muted truncate">

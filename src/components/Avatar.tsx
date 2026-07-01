@@ -31,14 +31,14 @@ export function Avatar({
         alt={name || nickname || "avatar"}
         style={dim}
         onError={() => setFailed(true)}
-        className="rounded-full object-cover bg-card2 ring-1 ring-line"
+        className="block shrink-0 rounded-full object-cover bg-card2 ring-1 ring-line"
       />
     );
   }
   return (
     <div
       style={{ ...dim, fontSize: size * 0.36 }}
-      className="rounded-full grid place-items-center bg-card2 text-ink font-semibold ring-1 ring-line"
+      className="shrink-0 rounded-full grid place-items-center bg-card2 text-ink font-semibold ring-1 ring-line"
     >
       {initials(name, nickname)}
     </div>

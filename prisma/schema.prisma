@@ -17,6 +17,8 @@ model Person {
 
   floor         Int?
   room          Int?
+  visitFloor    Int?
+  visitRoom     Int?
   status        String   @default("open")
   statusMessage String?
 
@@ -24,4 +26,5 @@ model Person {
   updatedAt     DateTime @updatedAt
 
   @@index([floor, room])
+  @@index([visitFloor, visitRoom])
 }

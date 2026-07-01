@@ -22,12 +22,12 @@ const hackclubProvider: any = {
     if (!slackId) console.warn("[auth] sign-in without slack_id claim — occupancy disabled for this session");
     return {
       id: profile.sub,
-      name: profile.name ?? profile.nickname ?? null,
+      name: null,
       email: profile.email ?? null,
 
       image: profile.picture ?? avatarUrl(profile.slack_id) ?? null,
       slackId,
-      nickname: profile.nickname ?? null,
+      nickname: null,
     };
   },
 };
@@ -42,9 +42,9 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       if (user) {
         const u = user as Record<string, any>;
         token.slackId = u.slackId ?? null;
-        token.nickname = u.nickname ?? null;
+        token.nickname = null;
         if (u.image) token.picture = u.image;
-        if (u.name) token.name = u.name;
+        token.name = null;
         if (u.email) token.email = u.email;
       }
       return token;
@@ -67,8 +67,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         await upsertIdentity({
           slackId,
           email: u.email ?? null,
-          name: u.name ?? u.nickname ?? null,
-          nickname: u.nickname ?? null,
+          name: null,
           image: u.image ?? null,
         });
       } catch (e) {

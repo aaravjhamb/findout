@@ -5,6 +5,7 @@ import { useSession, signIn, signOut } from "next-auth/react";
 import { Avatar } from "./Avatar";
 import { avatarUrl } from "@/lib/avatar";
 import { makeRoomId } from "@/lib/rooms";
+import { useDragDismiss } from "@/lib/useDragDismiss";
 import { STATUS_META, type RoomStatus } from "@/lib/types";
 
 interface Me {
@@ -14,11 +15,13 @@ interface Me {
   image: string | null;
   floor: number | null;
   room: number | null;
+  visitFloor: number | null;
+  visitRoom: number | null;
   status: string;
   statusMessage: string | null;
 }
 
-const STATUSES: RoomStatus[] = ["open", "away", "busy"];
+const STATUSES: RoomStatus[] = ["open", "busy", "away", "visiting"];
 
 const inputCls =
   "mt-1 w-full h-11 rounded-[10px] bg-card2 px-3 outline-none border-2 border-line focus:border-ink text-ink";
@@ -27,23 +30,30 @@ export default function ProfileSheet({
   open,
   authConfigured,
   prefill,
+  onboarding = false,
   onClose,
   onSaved,
 }: {
   open: boolean;
   authConfigured: boolean;
   prefill?: { floor: number; room: number } | null;
+  onboarding?: boolean;
   onClose: () => void;
   onSaved: () => void;
 }) {
   const { data: session, status: authStatus } = useSession();
+  const [nickname, setNickname] = useState("");
   const [floor, setFloor] = useState("");
   const [room, setRoom] = useState("");
+  const [visitFloor, setVisitFloor] = useState("");
+  const [visitRoom, setVisitRoom] = useState("");
   const [status, setStatus] = useState<RoomStatus>("open");
   const [msg, setMsg] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [staleSession, setStaleSession] = useState(false);
+  const closeSheet = onboarding ? () => {} : onClose;
+  const { sheetStyle, handleProps } = useDragDismiss(closeSheet);
 
   useEffect(() => {
     if (!open || !session?.user) return;
@@ -58,9 +68,12 @@ export default function ProfileSheet({
         if (!res.ok) return;
         const { me } = (await res.json()) as { me: Me | null };
         if (!me) return;
+        setNickname(me.nickname ?? "");
         setFloor(prefill ? String(prefill.floor) : me.floor ? String(me.floor) : "");
         setRoom(prefill ? String(prefill.room) : me.room ? String(me.room) : "");
-        setStatus((["open", "away", "busy"].includes(me.status) ? me.status : "open") as RoomStatus);
+        setVisitFloor(me.visitFloor ? String(me.visitFloor) : "");
+        setVisitRoom(me.visitRoom ? String(me.visitRoom) : "");
+        setStatus((["open", "away", "busy", "visiting"].includes(me.status) ? me.status : "open") as RoomStatus);
         setMsg(me.statusMessage ?? "");
       } catch {
 
@@ -72,16 +85,35 @@ export default function ProfileSheet({
 
   const save = async () => {
     setError(null);
+    const trimmedNickname = nickname.trim();
     const f = parseInt(floor, 10);
     const r = parseInt(room, 10);
-    if (!Number.isInteger(f) || f < 1 || f > 42) return setError("Floor must be 1–42.");
-    if (!Number.isInteger(r) || r < 1 || r > 31) return setError("Room must be 1–31.");
+    const vf = parseInt(visitFloor, 10);
+    const vr = parseInt(visitRoom, 10);
+    if (trimmedNickname.length < 2) return setError("Nickname must be at least 2 characters.");
+    if (!Number.isInteger(f) || f < 1 || f > 42) return setError("Floor must be 1-42.");
+    if (!Number.isInteger(r) || r < 1 || r > 31) return setError("Room must be 1-31.");
+    if (status === "visiting") {
+      if (!Number.isInteger(vf) || vf < 1 || vf > 42) return setError("Visiting floor must be 1-42.");
+      if (!Number.isInteger(vr) || vr < 1 || vr > 31) return setError("Visiting room must be 1-31.");
+    }
     setSaving(true);
     try {
+      const visitPatch =
+        status === "visiting"
+          ? { visitFloor: vf, visitRoom: vr }
+          : { visitFloor: null, visitRoom: null };
       const res = await fetch("/api/me", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ floor: f, room: r, status, statusMessage: msg }),
+        body: JSON.stringify({
+          nickname: trimmedNickname,
+          floor: f,
+          room: r,
+          status,
+          statusMessage: msg,
+          ...visitPatch,
+        }),
       });
       if (res.status === 401) {
         setStaleSession(true);
@@ -91,7 +123,7 @@ export default function ProfileSheet({
       if (!res.ok) setError(json.error || "Could not save.");
       else {
         onSaved();
-        onClose();
+        closeSheet();
       }
     } catch (e: any) {
       setError(e?.message || "Network error.");
@@ -101,23 +133,34 @@ export default function ProfileSheet({
   };
 
   const previewId = floor && room ? makeRoomId(parseInt(floor, 10), parseInt(room, 10)) : null;
+  const visitPreviewId =
+    visitFloor && visitRoom ? makeRoomId(parseInt(visitFloor, 10), parseInt(visitRoom, 10)) : null;
 
   return (
     <>
-      <div className="fixed inset-0 z-30 fade-in" style={{ background: "rgba(65,88,97,0.5)" }} onClick={onClose} />
-      <div className="fixed left-0 right-0 bottom-0 z-40 sheet-anim safe-bottom">
-        <div className="mx-auto max-w-lg bg-card rounded-t-2xl shadow-sheet border-t-2 border-x-2 border-line">
-          <div className="flex justify-center pt-2.5">
+      <div
+        className="fixed inset-0 z-30 fade-in"
+        style={{ background: "rgba(65,88,97,0.5)" }}
+        onClick={onboarding ? undefined : onClose}
+      />
+      <div className="fixed left-0 right-0 bottom-0 z-40 sheet-anim safe-bottom" style={sheetStyle}>
+        <div className="mx-auto max-w-lg max-h-[92dvh] flex flex-col bg-card rounded-t-2xl shadow-sheet border-t-2 border-x-2 border-line">
+          <div
+            className="flex justify-center pt-2.5 pb-1 touch-none cursor-grab active:cursor-grabbing"
+            aria-label={onboarding ? "Finish setup to continue" : "Drag down to close"}
+            role="button"
+            tabIndex={0}
+            {...handleProps}
+          >
             <div className="h-1.5 w-10 rounded-full bg-line" />
           </div>
 
-          <div className="px-5 pt-3 pb-6">
+          <div className="px-5 pt-3 pb-6 min-h-0 scroll-y">
             {authStatus !== "authenticated" ? (
               <div className="text-center py-6">
                 <h2 className="font-bells text-2xl text-ink">Share your room</h2>
                 <p className="text-sm text-muted mt-2 mb-5">
-                  Log in with Hack Club, then set your room and status. It stays private until you
-                  choose to make it public.
+                  Log in with Hack Club, then set a nickname, room, and status.
                 </p>
                 {authConfigured ? (
                   <button
@@ -129,33 +172,47 @@ export default function ProfileSheet({
                   </button>
                 ) : (
                   <div className="text-xs text-busy bg-busy/10 rounded-lg p-3 border-2 border-busy/40">
-                    Hack Club OAuth isn&apos;t configured yet. Add HACKCLUB_CLIENT_ID /
+                    Hack Club OAuth is not configured yet. Add HACKCLUB_CLIENT_ID /
                     HACKCLUB_CLIENT_SECRET to enable login.
                   </div>
                 )}
-                <button onClick={onClose} className="mt-4 text-sm text-muted">
-                  Maybe later
-                </button>
+                {!onboarding && (
+                  <button onClick={onClose} className="mt-4 text-sm text-muted">
+                    Maybe later
+                  </button>
+                )}
               </div>
             ) : (
               <>
                 <div className="flex items-center gap-3">
                   <Avatar
                     image={session?.user?.image ?? avatarUrl(session?.user?.slackId)}
-                    name={session?.user?.name}
-                    nickname={session?.user?.nickname}
+                    name={null}
+                    nickname={nickname}
                     size={48}
                   />
                   <div className="min-w-0">
-                    <div className="font-bold text-ink truncate">{session?.user?.name}</div>
-                    {session?.user?.nickname && (
-                      <div className="text-sm text-muted truncate">@{session.user.nickname}</div>
-                    )}
+                    <div className="font-bold text-ink truncate">
+                      {onboarding ? "Set up FindOut" : nickname || "Your profile"}
+                    </div>
+                    <div className="text-sm text-muted truncate">
+                      {onboarding ? "Nickname, room, then you are in." : "Nickname and room"}
+                    </div>
                   </div>
                   <button onClick={() => signOut()} className="ml-auto text-sm text-muted hover:text-ink">
                     Sign out
                   </button>
                 </div>
+
+                {onboarding && (
+                  <div className="mt-4 rounded-[10px] bg-card2 border-2 border-line p-3">
+                    <p className="text-sm text-ink font-bold">Welcome in.</p>
+                    <p className="text-xs text-muted mt-1">
+                      Add the nickname you want people to see and your room. After that, the map
+                      will show where you are and whether visitors should drop by.
+                    </p>
+                  </div>
+                )}
 
                 {staleSession && (
                   <div className="mt-4 rounded-[10px] bg-busy/10 border-2 border-busy/40 p-3">
@@ -172,9 +229,19 @@ export default function ProfileSheet({
                   </div>
                 )}
 
-                <div className="mt-5 grid grid-cols-2 gap-3">
+                <label className="block mt-5">
+                  <span className="text-xs text-muted font-bold">Nickname</span>
+                  <input
+                    value={nickname}
+                    onChange={(e) => setNickname(e.target.value.slice(0, 32))}
+                    placeholder="soup person"
+                    className={inputCls}
+                  />
+                </label>
+
+                <div className="mt-4 grid grid-cols-2 gap-3">
                   <label className="block">
-                    <span className="text-xs text-muted font-bold">Floor (1–42)</span>
+                    <span className="text-xs text-muted font-bold">Floor (1-42)</span>
                     <input
                       value={floor}
                       onChange={(e) => setFloor(e.target.value.replace(/[^0-9]/g, ""))}
@@ -184,7 +251,7 @@ export default function ProfileSheet({
                     />
                   </label>
                   <label className="block">
-                    <span className="text-xs text-muted font-bold">Room (1–31)</span>
+                    <span className="text-xs text-muted font-bold">Room (1-31)</span>
                     <input
                       value={room}
                       onChange={(e) => setRoom(e.target.value.replace(/[^0-9]/g, ""))}
@@ -196,13 +263,13 @@ export default function ProfileSheet({
                 </div>
                 {previewId && (
                   <p className="text-xs text-muted mt-1.5">
-                    That&apos;s room <span className="text-dark-blue font-bold">{previewId}</span>.
+                    That is room <span className="text-dark-blue font-bold">{previewId}</span>.
                   </p>
                 )}
 
                 <div className="mt-4">
                   <span className="text-xs text-muted font-bold">Status</span>
-                  <div className="mt-1.5 grid grid-cols-3 gap-2">
+                  <div className="mt-1.5 grid grid-cols-2 gap-2">
                     {STATUSES.map((s) => (
                       <button
                         key={s}
@@ -221,12 +288,46 @@ export default function ProfileSheet({
                   <p className="text-xs text-muted mt-1.5">{STATUS_META[status].hint}</p>
                 </div>
 
+                {status === "visiting" && (
+                  <div className="mt-4 rounded-[10px] bg-card2 border-2 border-line p-3">
+                    <span className="text-xs text-muted font-bold">Visiting room</span>
+                    <div className="mt-2 grid grid-cols-2 gap-3">
+                      <label className="block">
+                        <span className="text-xs text-muted font-bold">Floor</span>
+                        <input
+                          value={visitFloor}
+                          onChange={(e) => setVisitFloor(e.target.value.replace(/[^0-9]/g, ""))}
+                          inputMode="numeric"
+                          placeholder="36"
+                          className={inputCls}
+                        />
+                      </label>
+                      <label className="block">
+                        <span className="text-xs text-muted font-bold">Room</span>
+                        <input
+                          value={visitRoom}
+                          onChange={(e) => setVisitRoom(e.target.value.replace(/[^0-9]/g, ""))}
+                          inputMode="numeric"
+                          placeholder="12"
+                          className={inputCls}
+                        />
+                      </label>
+                    </div>
+                    {visitPreviewId && (
+                      <p className="text-xs text-muted mt-1.5">
+                        You will show as visiting room{" "}
+                        <span className="text-dark-blue font-bold">{visitPreviewId}</span>.
+                      </p>
+                    )}
+                  </div>
+                )}
+
                 <label className="block mt-4">
                   <span className="text-xs text-muted font-bold">Status message (optional)</span>
                   <input
                     value={msg}
                     onChange={(e) => setMsg(e.target.value.slice(0, 80))}
-                    placeholder="come hang out 👋"
+                    placeholder="come hang out"
                     className={inputCls}
                   />
                 </label>
@@ -239,7 +340,7 @@ export default function ProfileSheet({
                   className="mt-5 w-full h-12 rounded-[10px] bg-ink text-paper font-bold border-2 border-ink disabled:opacity-60"
                   style={{ boxShadow: "0 3px 0 rgba(97,69,58,0.3)" }}
                 >
-                  {saving ? "Saving…" : "Save"}
+                  {saving ? "Saving..." : onboarding ? "Finish setup" : "Save"}
                 </button>
               </>
             )}

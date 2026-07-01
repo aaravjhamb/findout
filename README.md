@@ -19,6 +19,7 @@ It's made to answer the simple question: "Can I drop by?"
 - `Open`: home and welcoming visitors.
 - `Away`: not in the room right now.
 - `Busy`: in the room, but heads-down.
+- `Visiting`: away from your own room and visiting another room.
 
 ## Room Format
 
@@ -36,8 +37,8 @@ Each floor supports rooms `1-31`, laid out in the same L-shaped plan.
 FindOut stores one `Person` record per Slack ID. A person appears in search and on
 the floor plan when their record has a valid floor and room.
 
-There is no bundled demo occupancy data. Without `DATABASE_URL`, the app can still
-boot, but it cannot persist rooms and the building will be empty.
+There is no bundled demo occupancy data. Production uses `DATABASE_URL`. Local dev
+can use `LOCAL_DEV_DB=file` to persist rooms to `.data/findout.local.json`.
 
 ## Tech Stack
 
@@ -62,10 +63,10 @@ Create your local environment file:
 cp .env.example .env.local
 ```
 
-Fill in:
+For local testing without Postgres, use the file-backed dev store:
 
 ```env
-DATABASE_URL="postgresql://user:password@localhost:5432/findout?schema=public"
+LOCAL_DEV_DB="file"
 AUTH_SECRET="..."
 NEXTAUTH_URL="http://localhost:3000"
 HACKCLUB_CLIENT_ID="..."
@@ -74,6 +75,10 @@ HACKCLUB_SCOPE="openid profile email slack_id"
 SLACK_BOT_TOKEN="xoxb-..."
 SOUP_BASE_CHANNEL_ID="G..."
 ```
+
+If your `.env` points at production or an internal deploy database, keep it there
+and put `LOCAL_DEV_DB=file` in `.env.local`. The local scripts load `.env.local`
+first, then fall back to `.env` for values like Slack and Hack Club credentials.
 
 Generate `AUTH_SECRET` with:
 
@@ -88,16 +93,10 @@ URI to:
 http://localhost:3000/api/auth/callback/hackclub
 ```
 
-Create or update the database tables:
-
-```bash
-npm run db:push
-```
-
 Start the app:
 
 ```bash
-npm run dev
+npm run dev:local
 ```
 
 Then open <http://localhost:3000>.
@@ -121,9 +120,14 @@ Slack setup:
 
 ```bash
 npm run dev      # start the local Next.js server
+npm run dev:local # start Next.js using .env.local over .env
 npm run build    # generate Prisma client and build for production
+npm run build:local # build using .env.local over .env
 npm run start    # run the production server
 npm run db:push  # push the Prisma schema to Postgres
+npm run db:push:local # push schema using .env.local over .env
+npm run db:local:up # optional: start local Docker Postgres
+npm run db:local:down # optional: stop local Docker Postgres
 ```
 
 ## Deploy

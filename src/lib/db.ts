@@ -8,4 +8,5 @@ export const prisma =
 
 if (process.env.NODE_ENV !== "production") globalForPrisma.prisma = prisma;
 
-export const DB_ENABLED = !!process.env.DATABASE_URL;
+export const LOCAL_FILE_DB = process.env.LOCAL_DEV_DB === "file";
+export const DB_ENABLED = LOCAL_FILE_DB || !!process.env.DATABASE_URL;
