@@ -1,0 +1,27 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Person {
+  id            String   @id @default(cuid())
+  slackId       String   @unique
+  email         String?
+  name          String?
+  nickname      String?
+  image         String?
+
+  floor         Int?
+  room          Int?
+  status        String   @default("open")
+  statusMessage String?
+
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([floor, room])
+}

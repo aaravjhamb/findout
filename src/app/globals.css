@@ -1,0 +1,103 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@font-face {
+  font-family: "Hells Bells";
+  src: url("/fonts/Hells-Bells.otf") format("opentype");
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
+html,
+body {
+  height: 100%;
+  overscroll-behavior: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+body {
+  margin: 0;
+  background: #fcf1e5;
+  color: #61453a;
+  font-family: var(--font-outfit), ui-sans-serif, system-ui, sans-serif;
+}
+
+.font-bells {
+  font-family: "Hells Bells", var(--font-outfit), sans-serif;
+  letter-spacing: 0.01em;
+}
+
+.app-shell {
+  position: fixed;
+  inset: 0;
+  height: 100dvh;
+  width: 100vw;
+  overflow: hidden;
+  background:
+    radial-gradient(120% 90% at 50% -10%, #fff8ee 0%, #fcf1e5 55%, #f6e6d3 100%);
+}
+
+.safe-top {
+  padding-top: env(safe-area-inset-top, 0px);
+}
+.safe-bottom {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+.scroll-y {
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+.scroll-y::-webkit-scrollbar {
+  width: 6px;
+}
+.scroll-y::-webkit-scrollbar-thumb {
+  background: rgba(97, 69, 58, 0.25);
+  border-radius: 3px;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+@keyframes sheet-up {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+.sheet-anim {
+  animation: sheet-up 0.28s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+.fade-in {
+  animation: fade-in 0.18s ease;
+}
+
+@keyframes soft-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.45;
+  }
+}
+.pulse-open {
+  animation: soft-pulse 1.8s ease-in-out infinite;
+}
