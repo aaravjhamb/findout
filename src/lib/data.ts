@@ -12,7 +12,7 @@ import {
   localClearAllNicknames,
   type LocalPersonRow,
 } from "./localDb";
-import { filterSoupBaseMembers } from "./slack";
+import { filterSoupBaseMembers, attachSlackDisplayNames } from "./slack";
 import { type Occupant, type RoomStatus, isStatus } from "./types";
 
 type PersonRow = {
@@ -40,7 +40,7 @@ function rowToResident(p: PersonRow): Occupant | null {
   return {
     entryId: `${p.slackId}:resident`,
     slackId: p.slackId,
-    name: null,
+    name: p.name,
     nickname: p.nickname,
     email: p.email,
     image: p.image ?? avatarUrl(p.slackId),
@@ -97,7 +97,7 @@ async function dbPublicOccupants(): Promise<Occupant[]> {
       o.image = await resolveAvatar(o.image, o.slackId);
     })
   );
-  return occupants;
+  return attachSlackDisplayNames(occupants);
 }
 
 export async function getPublicOccupants(): Promise<Occupant[]> {

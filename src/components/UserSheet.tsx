@@ -66,7 +66,7 @@ export default function UserSheet({
               <div className="min-w-0 flex-1">
                 <div className="text-xs uppercase tracking-wide text-muted font-bold">Resident file</div>
                 <h2 className="font-bells text-3xl mt-0.5 text-ink truncate">
-                  {user.nickname || "Someone"}
+                  {user.nickname || user.name || "Someone"}
                 </h2>
                 <div className="mt-1 flex items-center gap-2">
                   <StatusBadge status={user.status} />

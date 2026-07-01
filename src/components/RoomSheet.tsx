@@ -24,7 +24,7 @@ function OccupantRow({ o, onOpenUser }: { o: Occupant; onOpenUser: (user: Occupa
       <Avatar image={o.image} name={null} nickname={o.nickname} size={44} />
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-2">
-          <span className="font-bold text-ink truncate">{o.nickname || "Someone"}</span>
+          <span className="font-bold text-ink truncate">{o.nickname || o.name || "Someone"}</span>
           <StatusBadge status={o.status} />
         </div>
         {detail && <p className="text-sm text-dark-blue">{detail}</p>}
