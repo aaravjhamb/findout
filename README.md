@@ -1,70 +1,121 @@
-# FindOut - who's home?
+# FindOut
 
-A mobile-first web app for a 42-floor building. Search a **room**, **Slack handle**,
-or **email**, and the app flies you to that room in an interactive 3D building and
-shows who's there and their status. People only appear once they opt in and make
-their room public.
+FindOut is a mobile-first room finder for a 42-floor building. Log in with Hack Club, set your room and status, then use the floor rail, 2D floor plan, or search bar to see who is home.
 
-## Features
+Its made to answer the simple question: "Can I drop by?"
 
-- **Explore** — orbit / pinch-zoom a true 3D (Three.js) model of all 42 floors.
-- **Exploded view** — tap _Explore → Exploded_ to spread the floors apart.
-- **Search** — by room id (`3612`), `@slack-username`, email, name, or Slack ID.
-  Selecting a result flies the camera to the room and opens its details.
-- **Room details** — who's public in the room, their status, status message, and a
-  link to their Slack profile. Rooms can hold multiple people (roommates).
-- **Profile** — log in with **Hack Club Auth**, set your floor + room, pick a status,
-  and toggle public/private.
+## What It Does
 
-### Statuses
-- 🟢 **Open** — home & welcoming visitors
-- ⚪ **Away** — not in the room
-- 🔴 **Busy** — in the room but heads-down (do not disturb)
+- Shows a 42-floor building as a tappable 2D floor plan.
+- Searches by room number, name, Slack handle, email, or Slack ID.
+- Opens room details with everyone currently listed in that room.
+- Lets signed-in users save their floor, room, status, and a short status message.
+- Pulls profile info from Hack Club Auth, including Slack username, Slack ID, email, display name, and avatar.
 
-## Room numbering
-Floor + zero-padded room, matching the evacuation sign. Floor 36 room 12 → `3612`;
-floor 6 room 4 → `604`. Each floor has 31 rooms (天相/"Tianxiang" 01–31) laid out in
-the same L-shape as the floor plan.
+## Statuses
 
-## Data
-All occupancy is real and comes from the database — there is no mock/demo data.
-The building shows only people who have logged in, set their room, and made it
-public. An empty database renders an empty building.
+- `Open`: home and welcoming visitors.
+- `Away`: not in the room right now.
+- `Busy`: in the room, but heads-down.
+
+## Room Format
+
+Rooms are stored as `floor + two-digit room`.
+
+Examples:
+
+- Floor 36, room 12 -> `3612`
+- Floor 6, room 4 -> `604`
+
+Each floor supports rooms `1-31`, laid out in the same L-shaped plan.
+
+## Data Model
+
+FindOut stores one `Person` record per Slack ID. A person appears in search and on
+the floor plan when their record has a valid floor and room.
+
+There is no bundled demo occupancy data. Without `DATABASE_URL`, the app can still
+boot, but it cannot persist rooms and the building will be empty.
+
+## Tech Stack
+
+- Next.js 14 App Router
+- Auth.js v5 with Hack Club OIDC
+- Prisma 5
+- PostgreSQL
+- Tailwind CSS
+- TypeScript
+
+## Local Setup
+
+Install dependencies:
 
 ```bash
 npm install
-npm run dev      # http://localhost:3000
 ```
 
-## Setup (required)
+Create your local environment file:
 
-1. Copy env and fill it in:
-   ```bash
-   cp .env.example .env.local
-   ```
-2. **Database** — point `DATABASE_URL` at any Postgres (Supabase / Neon / local), then:
-   ```bash
-   npm run db:push     # create the table
-   ```
-3. **Hack Club Auth** — register an app at <https://auth.hackclub.com>. It's a standard
-   OpenID Connect provider. Set the redirect URI to:
-   ```
-   {NEXTAUTH_URL}/api/auth/callback/hackclub
-   ```
-   Put the client id/secret in `.env.local`, and generate `AUTH_SECRET`:
-   ```bash
-   openssl rand -base64 32
-   ```
-   The app requests scopes `openid profile email` (configurable via `HACKCLUB_SCOPE`).
-   We read the `slack_id`, `nickname` (Slack username), `name`, `email`, and `picture`
-   claims from the userinfo endpoint.
+```bash
+cp .env.example .env.local
+```
 
-## Tech
-Next.js 14 (App Router) · Auth.js v5 (Hack Club OIDC) · Prisma + Postgres ·
-Three.js via @react-three/fiber + drei · Tailwind CSS.
+Fill in:
+
+```env
+DATABASE_URL="postgresql://user:password@localhost:5432/findout?schema=public"
+AUTH_SECRET="..."
+NEXTAUTH_URL="http://localhost:3000"
+HACKCLUB_CLIENT_ID="..."
+HACKCLUB_CLIENT_SECRET="..."
+HACKCLUB_SCOPE="openid profile email slack_id"
+```
+
+Generate `AUTH_SECRET` with:
+
+```bash
+openssl rand -base64 32
+```
+
+Register a Hack Club Auth app at <https://auth.hackclub.com> and set the redirect
+URI to:
+
+```text
+http://localhost:3000/api/auth/callback/hackclub
+```
+
+Create or update the database tables:
+
+```bash
+npm run db:push
+```
+
+Start the app:
+
+```bash
+npm run dev
+```
+
+Then open <http://localhost:3000>.
+
+## Scripts
+
+```bash
+npm run dev      # start the local Next.js server
+npm run build    # generate Prisma client and build for production
+npm run start    # run the production server
+npm run db:push  # push the Prisma schema to Postgres
+```
 
 ## Deploy
-Deploy to Vercel, add the same env vars, and set the Hack Club redirect URI to your
-production URL. Use a hosted Postgres (Supabase/Neon) for `DATABASE_URL`.
 
+Deploy like a normal Next.js app. Set the same environment variables in your host,
+point `DATABASE_URL` at a hosted Postgres database, and add your production callback
+URL in Hack Club Auth:
 
+```text
+https://your-domain.example/api/auth/callback/hackclub
+```
+
+The included Dockerfile builds the app, ships Prisma, and runs the entrypoint on
+port `3000`.
