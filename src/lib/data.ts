@@ -1,7 +1,17 @@
 import { prisma, DB_ENABLED, LOCAL_FILE_DB } from "./db";
 import { makeRoomId, isValidRoom } from "./rooms";
 import { avatarUrl, resolveAvatar } from "./avatar";
-import { localOwnRecord, localPeopleWithRooms, localUpdateOccupancy, localUpsertIdentity } from "./localDb";
+import {
+  localOwnRecord,
+  localPeopleWithRooms,
+  localUpdateOccupancy,
+  localUpsertIdentity,
+  localAllPeople,
+  localAdminUpdatePerson,
+  localAdminDeletePerson,
+  localClearAllNicknames,
+  type LocalPersonRow,
+} from "./localDb";
 import { filterSoupBaseMembers } from "./slack";
 import { type Occupant, type RoomStatus, isStatus } from "./types";
 
@@ -157,6 +167,124 @@ export async function getOwnRecord(slackId: string): Promise<PersonRow | null> {
   requireDb();
   if (LOCAL_FILE_DB) return localOwnRecord(slackId);
   return prisma.person.findUnique({ where: { slackId } }) as unknown as Promise<PersonRow | null>;
+}
+
+// ---------------------------------------------------------------------------
+// Admin
+// ---------------------------------------------------------------------------
+
+/** Full person record for the admin panel, keyed by slackId (works in both
+ *  the Prisma and local-file backends). Timestamps are null in local mode. */
+export type AdminPerson = {
+  slackId: string;
+  email: string | null;
+  name: string | null;
+  nickname: string | null;
+  image: string | null;
+  floor: number | null;
+  room: number | null;
+  visitFloor: number | null;
+  visitRoom: number | null;
+  status: string;
+  statusMessage: string | null;
+  createdAt: string | null;
+  updatedAt: string | null;
+};
+
+export type AdminPatch = {
+  name?: string | null;
+  nickname?: string | null;
+  email?: string | null;
+  image?: string | null;
+  floor?: number | null;
+  room?: number | null;
+  visitFloor?: number | null;
+  visitRoom?: number | null;
+  status?: RoomStatus;
+  statusMessage?: string | null;
+};
+
+function localToAdmin(r: LocalPersonRow): AdminPerson {
+  return { ...r, createdAt: null, updatedAt: null };
+}
+
+function prismaToAdmin(r: {
+  slackId: string;
+  email: string | null;
+  name: string | null;
+  nickname: string | null;
+  image: string | null;
+  floor: number | null;
+  room: number | null;
+  visitFloor: number | null;
+  visitRoom: number | null;
+  status: string;
+  statusMessage: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+}): AdminPerson {
+  return {
+    slackId: r.slackId,
+    email: r.email,
+    name: r.name,
+    nickname: r.nickname,
+    image: r.image,
+    floor: r.floor,
+    room: r.room,
+    visitFloor: r.visitFloor,
+    visitRoom: r.visitRoom,
+    status: r.status,
+    statusMessage: r.statusMessage,
+    createdAt: r.createdAt.toISOString(),
+    updatedAt: r.updatedAt.toISOString(),
+  };
+}
+
+/** Admin: every person, rooms first, most-recently-updated within each. */
+export async function listAllPeople(): Promise<AdminPerson[]> {
+  requireDb();
+  if (LOCAL_FILE_DB) return (await localAllPeople()).map(localToAdmin);
+  const rows = await prisma.person.findMany({
+    orderBy: [{ floor: "asc" }, { room: "asc" }, { updatedAt: "desc" }],
+  });
+  return rows.map(prismaToAdmin);
+}
+
+/** Admin: a single person by slackId, or null if they don't exist. */
+export async function adminGetPerson(slackId: string): Promise<AdminPerson | null> {
+  requireDb();
+  if (LOCAL_FILE_DB) {
+    const row = await localOwnRecord(slackId);
+    return row ? localToAdmin(row) : null;
+  }
+  const row = await prisma.person.findUnique({ where: { slackId } });
+  return row ? prismaToAdmin(row) : null;
+}
+
+/** Admin: patch any person by slackId. */
+export async function adminUpdatePerson(slackId: string, patch: AdminPatch): Promise<AdminPerson> {
+  requireDb();
+  if (LOCAL_FILE_DB) return localToAdmin(await localAdminUpdatePerson(slackId, patch));
+  const row = await prisma.person.update({ where: { slackId }, data: patch });
+  return prismaToAdmin(row);
+}
+
+/** Admin: remove a person entirely. */
+export async function adminDeletePerson(slackId: string): Promise<void> {
+  requireDb();
+  if (LOCAL_FILE_DB) return localAdminDeletePerson(slackId);
+  await prisma.person.delete({ where: { slackId } });
+}
+
+/** Admin bulk action: clear everyone's nickname. Returns how many rows changed. */
+export async function adminClearAllNicknames(): Promise<number> {
+  requireDb();
+  if (LOCAL_FILE_DB) return localClearAllNicknames();
+  const { count } = await prisma.person.updateMany({
+    where: { nickname: { not: null } },
+    data: { nickname: null },
+  });
+  return count;
 }
 
 export async function updateOccupancy(

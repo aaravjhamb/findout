@@ -68,6 +68,46 @@ export async function localPeopleWithRooms(): Promise<LocalPersonRow[]> {
   return db.people.filter((p) => p.floor !== null && p.room !== null);
 }
 
+export async function localAllPeople(): Promise<LocalPersonRow[]> {
+  const db = await readLocalDb();
+  return db.people;
+}
+
+export async function localAdminUpdatePerson(
+  slackId: string,
+  patch: Partial<Omit<LocalPersonRow, "slackId">>
+): Promise<LocalPersonRow> {
+  const db = await readLocalDb();
+  const row = db.people.find((p) => p.slackId === slackId);
+  if (!row) throw new Error("person not found");
+  for (const key of Object.keys(patch) as (keyof typeof patch)[]) {
+    if (patch[key] !== undefined) (row as any)[key] = patch[key];
+  }
+  await writeLocalDb(db);
+  return row;
+}
+
+export async function localClearAllNicknames(): Promise<number> {
+  const db = await readLocalDb();
+  let count = 0;
+  for (const row of db.people) {
+    if (row.nickname !== null) {
+      row.nickname = null;
+      count++;
+    }
+  }
+  if (count > 0) await writeLocalDb(db);
+  return count;
+}
+
+export async function localAdminDeletePerson(slackId: string): Promise<void> {
+  const db = await readLocalDb();
+  const before = db.people.length;
+  db.people = db.people.filter((p) => p.slackId !== slackId);
+  if (db.people.length === before) throw new Error("person not found");
+  await writeLocalDb(db);
+}
+
 export async function localUpsertIdentity(input: {
   slackId: string;
   email?: string | null;
