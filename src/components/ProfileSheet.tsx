@@ -43,12 +43,18 @@ export default function ProfileSheet({
   const [msg, setMsg] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [staleSession, setStaleSession] = useState(false);
 
   useEffect(() => {
     if (!open || !session?.user) return;
+    setStaleSession(false);
     (async () => {
       try {
         const res = await fetch("/api/me");
+        if (res.status === 401) {
+          setStaleSession(true);
+          return;
+        }
         if (!res.ok) return;
         const { me } = (await res.json()) as { me: Me | null };
         if (!me) return;
@@ -77,6 +83,10 @@ export default function ProfileSheet({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ floor: f, room: r, status, statusMessage: msg }),
       });
+      if (res.status === 401) {
+        setStaleSession(true);
+        return;
+      }
       const json = await res.json();
       if (!res.ok) setError(json.error || "Could not save.");
       else {
@@ -146,6 +156,21 @@ export default function ProfileSheet({
                     Sign out
                   </button>
                 </div>
+
+                {staleSession && (
+                  <div className="mt-4 rounded-[10px] bg-busy/10 border-2 border-busy/40 p-3">
+                    <p className="text-sm text-ink font-bold">Your session needs a refresh</p>
+                    <p className="text-xs text-muted mt-1">
+                      Sign out and back in to reconnect your Slack ID, then you can save your room.
+                    </p>
+                    <button
+                      onClick={() => signOut({ callbackUrl: "/" })}
+                      className="mt-3 w-full h-11 rounded-[10px] bg-ink text-paper font-bold border-2 border-ink"
+                    >
+                      Sign out &amp; back in
+                    </button>
+                  </div>
+                )}
 
                 <div className="mt-5 grid grid-cols-2 gap-3">
                   <label className="block">

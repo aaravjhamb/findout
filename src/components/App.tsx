@@ -100,6 +100,17 @@ export default function App({ authConfigured }: { authConfigured: boolean }) {
     setRoomResult(null);
   }, []);
 
+  const openProfile = useCallback((prefill?: { floor: number; room: number }) => {
+    setProfilePrefill(prefill ?? null);
+    setRoomResult(null);
+    setProfileOpen(true);
+  }, []);
+
+  const onProfileSaved = useCallback(() => {
+    loadOccupants();
+    loadMe();
+  }, [loadOccupants, loadMe]);
+
   if (authStatus === "loading") {
     return (
       <div className="app-shell grid place-items-center">
@@ -123,7 +134,7 @@ export default function App({ authConfigured }: { authConfigured: boolean }) {
             <SearchBar onPick={handlePick} />
           </div>
           <div className="shrink-0">
-            <AuthButton authConfigured={authConfigured} onOpenProfile={() => setProfileOpen(true)} />
+            <AuthButton authConfigured={authConfigured} onOpenProfile={() => openProfile()} />
           </div>
         </div>
       </header>
@@ -159,12 +170,18 @@ export default function App({ authConfigured }: { authConfigured: boolean }) {
         </div>
       </main>
 
-      <RoomSheet result={roomResult} onClose={() => setRoomResult(null)} />
+      <RoomSheet
+        result={roomResult}
+        myRoom={myRoom}
+        onEditRoom={openProfile}
+        onClose={() => setRoomResult(null)}
+      />
       <ProfileSheet
         open={profileOpen}
         authConfigured={authConfigured}
+        prefill={profilePrefill}
         onClose={() => setProfileOpen(false)}
-        onSaved={loadOccupants}
+        onSaved={onProfileSaved}
       />
     </div>
   );

@@ -1,4 +1,4 @@
-# FindOut — who's home? 🏠
+# FindOut - who's home?
 
 A mobile-first web app for a 42-floor building. Search a **room**, **Slack handle**,
 or **email**, and the app flies you to that room in an interactive 3D building and
@@ -66,3 +66,5 @@ Three.js via @react-three/fiber + drei · Tailwind CSS.
 ## Deploy
 Deploy to Vercel, add the same env vars, and set the Hack Club redirect URI to your
 production URL. Use a hosted Postgres (Supabase/Neon) for `DATABASE_URL`.
+
+
