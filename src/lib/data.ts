@@ -1,6 +1,7 @@
 import { prisma, DB_ENABLED } from "./db";
 import { makeRoomId, isValidRoom } from "./rooms";
 import { avatarUrl, resolveAvatar } from "./avatar";
+import { filterSoupBaseMembers } from "./slack";
 import { type Occupant, type RoomStatus, isStatus } from "./types";
 
 type PersonRow = {
@@ -49,7 +50,7 @@ async function dbPublicOccupants(): Promise<Occupant[]> {
 export async function getPublicOccupants(): Promise<Occupant[]> {
   if (!DB_ENABLED) return [];
   try {
-    return await dbPublicOccupants();
+    return await filterSoupBaseMembers(await dbPublicOccupants());
   } catch (e) {
     console.error("[data] getPublicOccupants query failed:", e);
     return [];

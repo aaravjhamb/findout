@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { getOwnRecord, updateOccupancy, requireDb } from "@/lib/data";
 import { isValidRoom } from "@/lib/rooms";
+import { checkSoupBaseMembership } from "@/lib/slack";
 import { isStatus } from "@/lib/types";
 
 export const runtime = "nodejs";
@@ -11,6 +12,8 @@ export async function GET() {
   const session = await auth();
   const slackId = session?.user?.slackId;
   if (!slackId) return NextResponse.json({ error: "unauthenticated" }, { status: 401 });
+  const soupBase = await checkSoupBaseMembership(slackId);
+  if (!soupBase.ok) return NextResponse.json({ error: soupBase.error }, { status: soupBase.status });
 
   try {
     requireDb();
@@ -39,6 +42,8 @@ export async function PUT(req: NextRequest) {
   const session = await auth();
   const slackId = session?.user?.slackId;
   if (!slackId) return NextResponse.json({ error: "unauthenticated" }, { status: 401 });
+  const soupBase = await checkSoupBaseMembership(slackId);
+  if (!soupBase.ok) return NextResponse.json({ error: soupBase.error }, { status: soupBase.status });
 
   let body: any;
   try {

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { getRoomOccupants, searchPeople } from "@/lib/data";
 import { parseRoomId, makeRoomId } from "@/lib/rooms";
+import { checkSoupBaseMembership } from "@/lib/slack";
 import type { RoomResult } from "@/lib/types";
 
 export const runtime = "nodejs";
@@ -9,7 +10,10 @@ export const dynamic = "force-dynamic";
 
 export async function GET(req: NextRequest) {
   const session = await auth();
-  if (!session?.user) return NextResponse.json({ error: "unauthenticated" }, { status: 401 });
+  const slackId = session?.user?.slackId;
+  if (!slackId) return NextResponse.json({ error: "unauthenticated" }, { status: 401 });
+  const soupBase = await checkSoupBaseMembership(slackId);
+  if (!soupBase.ok) return NextResponse.json({ error: soupBase.error }, { status: soupBase.status });
 
   const q = (req.nextUrl.searchParams.get("q") || "").trim();
   if (!q) return NextResponse.json({ result: null, people: [] });

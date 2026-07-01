@@ -2,7 +2,7 @@
 
 FindOut is a mobile-first room finder for a 42-floor building. Log in with Hack Club, set your room and status, then use the floor rail, 2D floor plan, or search bar to see who is home.
 
-Its made to answer the simple question: "Can I drop by?"
+It's made to answer the simple question: "Can I drop by?"
 
 ## What It Does
 
@@ -11,6 +11,8 @@ Its made to answer the simple question: "Can I drop by?"
 - Opens room details with everyone currently listed in that room.
 - Lets signed-in users save their floor, room, status, and a short status message.
 - Pulls profile info from Hack Club Auth, including Slack username, Slack ID, email, display name, and avatar.
+- Requires membership in the private Slack channel `#soup-base` before someone can
+  load rooms, search, or update their own room.
 
 ## Statuses
 
@@ -69,6 +71,8 @@ NEXTAUTH_URL="http://localhost:3000"
 HACKCLUB_CLIENT_ID="..."
 HACKCLUB_CLIENT_SECRET="..."
 HACKCLUB_SCOPE="openid profile email slack_id"
+SLACK_BOT_TOKEN="xoxb-..."
+SOUP_BASE_CHANNEL_ID="G..."
 ```
 
 Generate `AUTH_SECRET` with:
@@ -97,6 +101,21 @@ npm run dev
 ```
 
 Then open <http://localhost:3000>.
+
+## Slack Gate
+
+FindOut checks `#soup-base` membership on the server before returning occupancy
+data, search results, or accepting profile updates. The check uses Slack's
+`conversations.members` API and fails closed if Slack is not configured or cannot
+verify the user.
+
+Slack setup:
+
+- Create a Slack app with the `groups:read` bot scope.
+- Install it to the workspace.
+- Invite the bot to the private `#soup-base` channel.
+- Set `SLACK_BOT_TOKEN` to the bot token.
+- Set `SOUP_BASE_CHANNEL_ID` to the private channel ID, not the name.
 
 ## Scripts
 
