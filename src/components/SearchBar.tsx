@@ -127,7 +127,7 @@ export default function SearchBar({
               <Avatar image={p.image} name={null} nickname={p.nickname} size={40} />
               <div className="min-w-0 flex-1">
                 <div className="font-semibold text-ink truncate flex items-center gap-2">
-                  {p.nickname || "Someone"}
+                  {p.nickname || p.name || "Someone"}
                   <StatusDot status={p.status} />
                 </div>
                 <div className="text-sm text-muted truncate">
