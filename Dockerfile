@@ -1,10 +1,12 @@
 # syntax=docker/dockerfile:1
 
 # ---- base ---------------------------------------------------------------
-FROM node:20-alpine AS base
+FROM node:20-bookworm-slim AS base
 WORKDIR /app
-# libc6-compat + openssl are needed by the Prisma query engine on Alpine.
-RUN apk add --no-cache libc6-compat openssl
+# Prisma and Next's native pieces are happier on glibc than Alpine/musl.
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends openssl ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
 
 # ---- deps (installs node_modules + generates Prisma client) --------------
 FROM base AS deps
