@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useSession } from "next-auth/react";
 import LoginGate from "./LoginGate";
 import AuthButton from "./AuthButton";
@@ -11,7 +11,6 @@ import ProfileSheet from "./ProfileSheet";
 import HelpSheet from "./HelpSheet";
 import FloorPlan2D from "./FloorPlan2D";
 import FloorRail from "./FloorRail";
-import SoupocalypseAd from "./SoupocalypseAd";
 import { makeRoomId, parseRoomId } from "@/lib/rooms";
 import { avatarUrl } from "@/lib/avatar";
 import type { Occupant, RoomResult } from "@/lib/types";
@@ -206,19 +205,19 @@ export default function App({ authConfigured }: { authConfigured: boolean }) {
     }
   }, [authStatus, linkQuery, needsOnboarding, occupants, openRoom, openUser, viewOccupants]);
 
-  let content: ReactNode;
-
   if (authStatus === "loading") {
-    content = (
+    return (
       <div className="app-shell grid place-items-center">
         <span className="h-8 w-8 rounded-full border-2 border-line border-t-ink animate-spin" />
       </div>
     );
-  } else if (authStatus !== "authenticated") {
-    content = <LoginGate authConfigured={authConfigured} />;
-  } else {
-    content = (
-      <div className="app-shell flex flex-col">
+  }
+  if (authStatus !== "authenticated") {
+    return <LoginGate authConfigured={authConfigured} />;
+  }
+
+  return (
+    <div className="app-shell flex flex-col">
       <header className="safe-top z-20 px-3 pt-3 pb-2 border-b-2 border-line bg-paper/80 backdrop-blur">
         <div className="flex items-center gap-3 pt-3">
           <div className="min-w-0">
@@ -309,13 +308,5 @@ export default function App({ authConfigured }: { authConfigured: boolean }) {
         </a>
       </div>
     </div>
-    );
-  }
-
-  return (
-    <>
-      {content}
-      <SoupocalypseAd />
-    </>
   );
 }
